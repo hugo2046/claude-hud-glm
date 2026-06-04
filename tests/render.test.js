@@ -159,6 +159,22 @@ test('renderSessionLine suppresses token breakdown below raised contextCriticalT
   assert.ok(!line.includes('in:'), 'expected no token breakdown at 90% when critical threshold is 95');
 });
 
+test('renderSessionLine token display uses autoCompactWindow as denominator when set', () => {
+  const ctx = baseContext();
+  ctx.config = mergeConfig({
+    lineLayout: 'compact',
+    display: { contextValue: 'both', autoCompactWindow: 200000, showTokenBreakdown: false },
+  });
+  // 70.6k tokens against a 1M model window, but auto-compact window is 200k.
+  ctx.stdin.context_window.context_window_size = 1000000;
+  ctx.stdin.context_window.current_usage.input_tokens = 70600;
+  const line = stripAnsi(renderSessionLine(ctx));
+  // Should match /context: 35% (71k/200k), not 7% (71k/1.0M).
+  assert.ok(line.includes('35%'), `expected 35% in: ${line}`);
+  assert.ok(line.includes('/200k'), `expected /200k denominator in: ${line}`);
+  assert.ok(!line.includes('/1.0M'), `expected full window not shown in: ${line}`);
+});
+
 test('renderIdentityLine token breakdown honours contextCriticalThreshold', () => {
   const ctx = baseContext();
   ctx.config.display.contextCriticalThreshold = 50;
@@ -474,6 +490,28 @@ test('renderSessionLine includes customLine when configured', () => {
   assert.ok(line.includes('Ship it'));
 });
 
+test('renderSessionLine places customLine before model badge when position is first', () => {
+  const ctx = baseContext();
+  ctx.config.display.customLine = 'prod-server';
+  ctx.config.display.customLinePosition = 'first';
+  const line = stripAnsi(renderSessionLine(ctx));
+  const customIdx = line.indexOf('prod-server');
+  const modelIdx = line.indexOf('[Opus]');
+  assert.ok(customIdx >= 0, 'should include custom line');
+  assert.ok(modelIdx >= 0, 'should include model badge');
+  assert.ok(customIdx < modelIdx, `custom line (${customIdx}) should appear before model badge (${modelIdx})`);
+});
+
+test('renderSessionLine places customLine at end when position is last', () => {
+  const ctx = baseContext();
+  ctx.config.display.customLine = 'prod-server';
+  ctx.config.display.customLinePosition = 'last';
+  const line = stripAnsi(renderSessionLine(ctx));
+  const customIdx = line.indexOf('prod-server');
+  const modelIdx = line.indexOf('[Opus]');
+  assert.ok(customIdx > modelIdx, 'custom line should appear after model badge when position is last');
+});
+
 test('renderSessionLine applies modelFormat compact', () => {
   const ctx = baseContext();
   ctx.stdin.model = { display_name: 'Opus 4.6 (1M context)' };
@@ -571,6 +609,30 @@ test('renderProjectLine includes customLine when configured', () => {
   ctx.config.display.customLine = 'Stay sharp';
   const line = stripAnsi(renderProjectLine(ctx) ?? '');
   assert.ok(line.includes('Stay sharp'));
+});
+
+test('renderProjectLine places customLine before model badge when position is first', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/my-project';
+  ctx.config.display.customLine = 'prod-server';
+  ctx.config.display.customLinePosition = 'first';
+  const line = stripAnsi(renderProjectLine(ctx) ?? '');
+  const customIdx = line.indexOf('prod-server');
+  const modelIdx = line.indexOf('[Opus]');
+  assert.ok(customIdx >= 0, 'should include custom line');
+  assert.ok(modelIdx >= 0, 'should include model badge');
+  assert.ok(customIdx < modelIdx, `custom line (${customIdx}) should appear before model badge (${modelIdx})`);
+});
+
+test('renderProjectLine places customLine at end when position is last', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/my-project';
+  ctx.config.display.customLine = 'prod-server';
+  ctx.config.display.customLinePosition = 'last';
+  const line = stripAnsi(renderProjectLine(ctx) ?? '');
+  const customIdx = line.indexOf('prod-server');
+  const modelIdx = line.indexOf('[Opus]');
+  assert.ok(customIdx > modelIdx, 'custom line should appear after model badge when position is last');
 });
 
 test('renderProjectLine applies modelFormat compact (strips context suffix)', () => {
@@ -1228,6 +1290,16 @@ test('renderTodosLine truncates long todo content', () => {
   ];
   const line = renderTodosLine(ctx);
   assert.ok(line?.includes('...'));
+});
+
+test('renderTodosLine tolerates missing in-progress todo content', () => {
+  const ctx = baseContext();
+  ctx.transcript.todos = [
+    { status: 'in_progress' },
+  ];
+
+  assert.doesNotThrow(() => renderTodosLine(ctx));
+  assert.ok(renderTodosLine(ctx)?.includes('(0/1)'));
 });
 
 test('renderTodosLine returns null when no todos exist', () => {

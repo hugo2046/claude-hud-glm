@@ -263,6 +263,7 @@ If user chooses "Remove", set `display.customLine` to `""` in config.
 | Last response time | `display.showLastResponseAt` |
 | Advisor model | `display.showAdvisor` |
 | Custom line | `display.customLine` |
+| Custom line position | `display.customLinePosition` |
 
 **Always true (not configurable):**
 - `display.showModel: true`

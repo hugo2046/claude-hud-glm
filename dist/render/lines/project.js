@@ -49,6 +49,11 @@ export function renderProjectLine(ctx) {
     const display = ctx.config?.display;
     const colors = ctx.config?.colors;
     const parts = [];
+    const customLine = display?.customLine;
+    const customLinePosition = display?.customLinePosition ?? 'last';
+    if (customLine && customLinePosition === 'first') {
+        parts.push(customColor(customLine, colors));
+    }
     if (display?.showModel !== false) {
         const model = formatModelName(getModelName(ctx.stdin), ctx.config?.display?.modelFormat, ctx.config?.display?.modelOverride);
         const providerLabel = getProviderLabel(ctx.stdin);
@@ -155,8 +160,7 @@ export function renderProjectLine(ctx) {
             parts.push(label(`${t('format.out')}: ${speed.toFixed(1)} ${t('format.tokPerSec')}`, colors));
         }
     }
-    const customLine = display?.customLine;
-    if (customLine) {
+    if (customLine && customLinePosition === 'last') {
         parts.push(customColor(customLine, colors));
     }
     if (parts.length === 0) {

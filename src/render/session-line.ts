@@ -21,8 +21,9 @@ const DEBUG = process.env.DEBUG?.includes('claude-hud') || process.env.DEBUG ===
 export function renderSessionLine(ctx: RenderContext): string {
   const model = formatModelName(getModelName(ctx.stdin), ctx.config?.display?.modelFormat, ctx.config?.display?.modelOverride);
 
-  const rawPercent = getContextPercent(ctx.stdin);
-  const bufferedPercent = getBufferedPercent(ctx.stdin);
+  const autoCompactWindow = ctx.config?.display?.autoCompactWindow ?? null;
+  const rawPercent = getContextPercent(ctx.stdin, autoCompactWindow);
+  const bufferedPercent = getBufferedPercent(ctx.stdin, autoCompactWindow);
   const autocompactMode = ctx.config?.display?.autocompactBuffer ?? 'enabled';
   const percent = autocompactMode === 'disabled' ? rawPercent : bufferedPercent;
 
@@ -46,7 +47,13 @@ export function renderSessionLine(ctx: RenderContext): string {
   const contextValue = formatContextValue(ctx, percent, contextValueMode);
   const contextValueDisplay = `${getContextColor(percent, colors, contextThresholds)}${contextValue}${RESET}`;
 
-  // Model and context bar (FIRST)
+  const customLine = display?.customLine;
+  const customLinePosition = display?.customLinePosition ?? 'last';
+  if (customLine && customLinePosition === 'first') {
+    parts.push(customColor(customLine, colors));
+  }
+
+  // Model and context bar
   const providerLabel = getProviderLabel(ctx.stdin);
   const modelQualifier = providerLabel ?? undefined;
   let modelDisplay = modelQualifier ? `${model} | ${modelQualifier}` : model;
@@ -66,7 +73,7 @@ export function renderSessionLine(ctx: RenderContext): string {
     parts.push(contextValueDisplay);
   }
 
-  // Project path + git status (SECOND)
+  // Project path + git status
   let projectPart: string | null = null;
   if (display?.showProject !== false && ctx.stdin.cwd) {
     // Split by both Unix (/) and Windows (\) separators for cross-platform support
@@ -308,9 +315,7 @@ export function renderSessionLine(ctx: RenderContext): string {
     parts.push(label(ctx.extraLabel, colors));
   }
 
-  // Custom line (static user-defined text)
-  const customLine = display?.customLine;
-  if (customLine) {
+  if (customLine && customLinePosition === 'last') {
     parts.push(customColor(customLine, colors));
   }
 
@@ -341,7 +346,14 @@ function formatTokens(n: number): string {
 
 function formatContextValue(ctx: RenderContext, percent: number, mode: 'percent' | 'tokens' | 'remaining' | 'both'): string {
   const totalTokens = getTotalTokens(ctx.stdin);
-  const size = ctx.stdin.context_window?.context_window_size ?? 0;
+  const autoCompactWindow = ctx.config?.display?.autoCompactWindow ?? null;
+  // When an explicit auto-compact window is configured, use it as the token
+  // denominator so the tokens/both displays match the percentage (and /context),
+  // rather than the full model context window.
+  const size =
+    typeof autoCompactWindow === 'number' && autoCompactWindow > 0
+      ? autoCompactWindow
+      : ctx.stdin.context_window?.context_window_size ?? 0;
 
   if (mode === 'tokens') {
     if (size > 0) {
