@@ -77,6 +77,36 @@ function writeCache(homeDir: string, transcriptPath: string, cache: SpeedCache):
   }
 }
 
+function readFileSizeCache(cachePath: string): FileSizeCache | null {
+  try {
+    if (!fs.existsSync(cachePath)) return null;
+    const parsed = JSON.parse(fs.readFileSync(cachePath, 'utf8')) as FileSizeCache;
+    if (
+      typeof parsed.fileSize !== 'number'
+      || !Number.isFinite(parsed.fileSize)
+      || typeof parsed.timestamp !== 'number'
+      || !Number.isFinite(parsed.timestamp)
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeFileSizeCache(cachePath: string, cache: FileSizeCache): void {
+  try {
+    const cacheDir = path.dirname(cachePath);
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    fs.writeFileSync(cachePath, JSON.stringify(cache), 'utf8');
+  } catch {
+    // Ignore cache write failures
+  }
+}
+
 // Remove the pre-0.x global cache file once, if present. It has no owner
 // session so leaving it around only wastes disk.
 function removeLegacyCache(homeDir: string): void {
@@ -105,21 +135,16 @@ function getTranscriptSpeed(
   now: number,
 ): number | null {
   try {
-    if (!fs.existsSync(transcriptPath)) return null;
-    const fileSize = fs.statSync(transcriptPath).size;
+    const stat = fs.statSync(transcriptPath);
+    if (!stat.isFile()) return null;
 
-    const cachePath = getCachePath(homeDir, transcriptPath) + '.fs';
-    let prev: FileSizeCache | null = null;
-    try {
-      if (fs.existsSync(cachePath)) {
-        prev = JSON.parse(fs.readFileSync(cachePath, 'utf8')) as FileSizeCache;
-      }
-    } catch {
-      /* ignore corrupt cache */
-    }
+    const canonicalTranscriptPath = fs.realpathSync(transcriptPath);
+    const fileSize = stat.size;
+    const cachePath = getCachePath(homeDir, canonicalTranscriptPath) + '.fs';
+    const prev = readFileSizeCache(cachePath);
 
-    if (!prev || typeof prev.fileSize !== 'number') {
-      fs.writeFileSync(cachePath, JSON.stringify({ fileSize, timestamp: now }), 'utf8');
+    if (!prev) {
+      writeFileSizeCache(cachePath, { fileSize, timestamp: now });
       return null;
     }
 
@@ -127,12 +152,14 @@ function getTranscriptSpeed(
     const deltaMs = now - prev.timestamp;
 
     if (deltaMs > SPEED_WINDOW_MS || deltaMs < MIN_DELTA_MS || deltaBytes <= 0) {
-      fs.writeFileSync(cachePath, JSON.stringify({ fileSize, timestamp: now }), 'utf8');
+      if (deltaMs >= MIN_DELTA_MS) {
+        writeFileSizeCache(cachePath, { fileSize, timestamp: now });
+      }
       return null;
     }
 
     const estimatedTokens = deltaBytes / BYTES_PER_TOKEN;
-    fs.writeFileSync(cachePath, JSON.stringify({ fileSize, timestamp: now }), 'utf8');
+    writeFileSizeCache(cachePath, { fileSize, timestamp: now });
     return estimatedTokens / (deltaMs / 1000);
   } catch {
     return null;
