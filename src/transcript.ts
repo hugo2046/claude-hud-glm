@@ -5,6 +5,7 @@ import * as readline from 'readline';
 import { createHash } from 'node:crypto';
 import { getHudPluginDir } from './claude-config-dir.js';
 import type { TranscriptData, ToolEntry, AgentEntry, TodoItem, SessionTokenUsage } from './types.js';
+import { sanitizeDisplayText } from './utils/sanitize.js';
 
 interface TranscriptLine {
   timestamp?: string;
@@ -84,14 +85,6 @@ interface TranscriptCacheFile {
 const TRANSCRIPT_CACHE_VERSION = 9;
 const MCP_TOOL_NAME_PATTERN = /^mcp__(.+?)__(.+)$/;
 const ACTIVITY_NAME_MAX_LEN = 64;
-const DISPLAY_CONTROL_PATTERN = new RegExp(
-  '[' +
-  '\\u0000-\\u001F\\u007F-\\u009F' +
-  '\\u061C\\u200E\\u200F' +
-  '\\u202A-\\u202E\\u2066-\\u2069\\u206A-\\u206F' +
-  ']',
-  'g',
-);
 
 // Hard cap on the advisor model ID captured from the transcript. Real Claude
 // model IDs (e.g. "claude-haiku-4-5-20251001") fit comfortably under this; the
@@ -147,12 +140,7 @@ function normalizeActivityName(value: unknown): string | undefined {
     return undefined;
   }
 
-  const sanitized = value
-    .replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '')
-    .replace(/\x1B\][^\x07\x1B]*(?:\x07|\x1B\\)/g, '')
-    .replace(/\x1B[@-Z\\-_]/g, '')
-    .replace(DISPLAY_CONTROL_PATTERN, '')
-    .trim();
+  const sanitized = sanitizeDisplayText(value).trim();
 
   if (!sanitized) {
     return undefined;

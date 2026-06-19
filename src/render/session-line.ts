@@ -1,6 +1,6 @@
 import type { RenderContext } from '../types.js';
 import { isLimitReached } from '../types.js';
-import { getContextPercent, getBufferedPercent, getModelName, formatModelName, getProviderLabel, getTotalTokens, shouldHideUsage } from '../stdin.js';
+import { getContextPercent, getBufferedPercent, getModelName, formatModelName, getProviderLabel, shouldHideUsage } from '../stdin.js';
 import { getOutputSpeed } from '../speed-tracker.js';
 import { coloredBar, critical, git as gitColor, gitBranch as gitBranchColor, label, model as modelColor, project as projectColor, getContextColor, getQuotaColor, quotaBar, custom as customColor, RESET } from './colors.js';
 import { getAdaptiveBarWidth } from '../utils/terminal.js';
@@ -11,8 +11,10 @@ import { renderAdvisorLine } from './lines/advisor.js';
 import { t } from '../i18n/index.js';
 import type { TimeFormatMode, UsageValueMode } from '../config.js';
 import { formatResetTime } from './format-reset-time.js';
+import { formatTokens, formatContextValue } from '../utils/format.js';
+import { createDebug } from '../debug.js';
 
-const DEBUG = process.env.DEBUG?.includes('claude-hud') || process.env.DEBUG === '*';
+const debug = createDebug('context');
 
 /**
  * Renders the full session line (model + context bar + project + git + counts + usage + duration).
@@ -27,8 +29,8 @@ export function renderSessionLine(ctx: RenderContext): string {
   const autocompactMode = ctx.config?.display?.autocompactBuffer ?? 'enabled';
   const percent = autocompactMode === 'disabled' ? rawPercent : bufferedPercent;
 
-  if (DEBUG && autocompactMode === 'disabled') {
-    console.error(`[claude-hud:context] autocompactBuffer=disabled, showing raw ${rawPercent}% (buffered would be ${bufferedPercent}%)`);
+  if (autocompactMode === 'disabled') {
+    debug(`autocompactBuffer=disabled, showing raw ${rawPercent}% (buffered would be ${bufferedPercent}%`);
   }
 
   const colors = ctx.config?.colors;
@@ -348,48 +350,6 @@ export function renderSessionLine(ctx: RenderContext): string {
   }
 
   return line;
-}
-
-function formatTokens(n: number): string {
-  if (n >= 1000000) {
-    return `${(n / 1000000).toFixed(1)}M`;
-  }
-  if (n >= 1000) {
-    return `${(n / 1000).toFixed(0)}k`;
-  }
-  return n.toString();
-}
-
-function formatContextValue(ctx: RenderContext, percent: number, mode: 'percent' | 'tokens' | 'remaining' | 'both'): string {
-  const totalTokens = getTotalTokens(ctx.stdin);
-  const autoCompactWindow = ctx.config?.display?.autoCompactWindow ?? null;
-  // When an explicit auto-compact window is configured, use it as the token
-  // denominator so the tokens/both displays match the percentage (and /context),
-  // rather than the full model context window.
-  const size =
-    typeof autoCompactWindow === 'number' && autoCompactWindow > 0
-      ? autoCompactWindow
-      : ctx.stdin.context_window?.context_window_size ?? 0;
-
-  if (mode === 'tokens') {
-    if (size > 0) {
-      return `${formatTokens(totalTokens)}/${formatTokens(size)}`;
-    }
-    return formatTokens(totalTokens);
-  }
-
-  if (mode === 'both') {
-    if (size > 0) {
-      return `${percent}% (${formatTokens(totalTokens)}/${formatTokens(size)})`;
-    }
-    return `${percent}%`;
-  }
-
-  if (mode === 'remaining') {
-    return `${Math.max(0, 100 - percent)}%`;
-  }
-
-  return `${percent}%`;
 }
 
 function formatCompactWindowPart(
