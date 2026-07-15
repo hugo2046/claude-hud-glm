@@ -161,7 +161,8 @@ export async function getZhipuUsage(
   env: NodeJS.ProcessEnv,
   deps: ZhipuDeps,
 ): Promise<UsageData | null> {
-  const { apiKey, host } = getZhipuCredentials(env);
+  // readCache 自身不抛错（内部 try/catch），可在顶层调用；其余逻辑（凭证/fetch/parse/write）
+  // 全部包进 try，任何异常都走旧缓存兜底——绝不向 main 抛出，否则整个 statusLine 崩。
   const cached = readCache(deps.homeDir);
 
   if (cached && deps.now - cached.savedAt <= GLM_QUOTA_TTL_MS) {
@@ -169,6 +170,7 @@ export async function getZhipuUsage(
   }
 
   try {
+    const { apiKey, host } = getZhipuCredentials(env);
     const json = await fetchZhipuQuota(host, apiKey, { fetch: deps.fetch });
     const tiers = parseZhipuTiers((json as { data?: unknown } | null)?.data);
     const payload: GlmQuotaPayload = {
@@ -178,8 +180,16 @@ export async function getZhipuUsage(
       sevenDayResetAt: tiers.sevenDay?.resetAt ?? null,
       level: tiers.level,
     };
-    writeCache(deps.homeDir, payload, deps.now);
-    return payloadToUsage(payload);
+    // 全 null（接口异常/限流错误包/结构变更）不覆盖有效缓存，用旧缓存兜底
+    const hasData =
+      payload.fiveHour !== null ||
+      payload.sevenDay !== null ||
+      payload.level !== null;
+    if (hasData) {
+      writeCache(deps.homeDir, payload, deps.now);
+      return payloadToUsage(payload);
+    }
+    return cached ? payloadToUsage(cached) : null;
   } catch {
     return cached ? payloadToUsage(cached) : null;
   }

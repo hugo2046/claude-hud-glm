@@ -9,7 +9,7 @@ import {
   parseZhipuTiers,
   getZhipuUsage,
 } from '../dist/providers/zhipu.js';
-import { writeCache, GLM_QUOTA_TTL_MS } from '../dist/glm-quota-cache.js';
+import { writeCache, readCache, GLM_QUOTA_TTL_MS } from '../dist/glm-quota-cache.js';
 
 // 合成 fixture（非真实账户数据；key 是占位符）
 const ENV = {
@@ -148,6 +148,38 @@ test('getZhipuUsage: no cache + fetch failure → null', async () => {
     const failFetch = async () => { throw new Error('network'); };
     const usage = await getZhipuUsage(ENV, { homeDir, now: 1000, fetch: failFetch });
     assert.equal(usage, null);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('getZhipuUsage: missing api key returns null, does not throw (Issue 1: 凭证错误不崩 statusLine)', async () => {
+  const { homeDir, cleanup } = await withHome();
+  try {
+    // 智谱 env 但缺 key → getZhipuCredentials 抛错，应被兜底返回 null（不向 main 传播）
+    const usage = await getZhipuUsage(
+      { ANTHROPIC_BASE_URL: 'https://open.bigmodel.cn/api/anthropic' },
+      { homeDir, now: 1000 },
+    );
+    assert.equal(usage, null);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('getZhipuUsage: all-null response does not overwrite valid cache (Issue 2)', async () => {
+  const { homeDir, cleanup } = await withHome();
+  try {
+    // 先写有效缓存
+    writeCache(homeDir, { fiveHour: 42, sevenDay: 7, fiveHourResetAt: '2026-07-15T07:00:00.000Z', sevenDayResetAt: null, level: 'test' }, 1000);
+    // 过期 → fetch 返回全 null 响应（空 limits，模拟接口异常/限流错误包）
+    const emptyFetch = async () => ({ ok: true, json: async () => ({ data: { limits: [], level: null } }) });
+    const usage = await getZhipuUsage(ENV, { homeDir, now: 1000 + GLM_QUOTA_TTL_MS + 1, fetch: emptyFetch });
+    // 应该用旧缓存（42），不是全 null
+    assert.equal(usage.fiveHour, 42);
+    // 缓存没被全 null 覆盖
+    const cached = readCache(homeDir);
+    assert.equal(cached.fiveHour, 42);
   } finally {
     await cleanup();
   }

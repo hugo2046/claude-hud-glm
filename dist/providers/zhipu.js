@@ -107,7 +107,6 @@ function payloadToUsage(p) {
 }
 
 export async function getZhipuUsage(env, deps) {
-  const { apiKey, host } = getZhipuCredentials(env);
   const cached = readCache(deps.homeDir);
 
   if (cached && deps.now - cached.savedAt <= GLM_QUOTA_TTL_MS) {
@@ -115,6 +114,7 @@ export async function getZhipuUsage(env, deps) {
   }
 
   try {
+    const { apiKey, host } = getZhipuCredentials(env);
     const json = await fetchZhipuQuota(host, apiKey, { fetch: deps.fetch });
     const tiers = parseZhipuTiers(json?.data);
     const payload = {
@@ -124,8 +124,15 @@ export async function getZhipuUsage(env, deps) {
       sevenDayResetAt: tiers.sevenDay?.resetAt ?? null,
       level: tiers.level,
     };
-    writeCache(deps.homeDir, payload, deps.now);
-    return payloadToUsage(payload);
+    const hasData =
+      payload.fiveHour !== null ||
+      payload.sevenDay !== null ||
+      payload.level !== null;
+    if (hasData) {
+      writeCache(deps.homeDir, payload, deps.now);
+      return payloadToUsage(payload);
+    }
+    return cached ? payloadToUsage(cached) : null;
   } catch {
     return cached ? payloadToUsage(cached) : null;
   }
