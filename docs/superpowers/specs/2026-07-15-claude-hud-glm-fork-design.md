@@ -136,6 +136,18 @@ statusLine 刷新 (main async) → index.ts 组装 usageData
 - **config 开关**：复用 `showUsage`，不单独加 `showGlmQuota`（YAGNI）
 - **缓存 TTL**：240000ms（4min）；**fetch 超时**：5000ms
 
+## 安全与隐私（硬约束）
+
+fork 推公开 GitHub（`hugo2046/claude-hud-glm`），**零密钥零敏感信息**是硬约束，实施全程必须维持：
+
+- **代码零硬编码**：智谱凭证只从环境变量读（`ANTHROPIC_AUTH_TOKEN` / `ZHIPUAI_API_KEY`），任何源码/配置/文档不写死 key。运行时 statusLine 继承 Claude Code 环境拿 key，仓库内不存 key。
+- **测试 fixture 必须合成**：`parseZhipuTiers` / `fetchZhipuQuota` 的测试用**编造的合成值**（如 `percentage: 42`、`level: "test"`、`nextResetTime: 1784102030306` 这类不泄露真实用量的数）。**禁止粘贴真实 API dump**——真实账户的配额快照（`level`/`percentage`/`nextResetTime`）属隐私，不得进仓库。
+- **文档占位符**：README/示例用 `YOUR_API_KEY` / `<your-api-key>` 占位，不贴真实 key 或真实账户数据。
+- **.gitignore 已覆盖**（上游 claude-hud）：`.env`、`.env.*`、`.claude/settings.json`、`.claude/*.local.json`、`*.pem`、`*.key`、`secrets/`、`credentials/` 均已忽略；新增 `glm-quota` 缓存位于 `~/.claude/plugins/claude-hud/glm-quota/`（仓库外），不进仓库。
+- **外挂 `.env` 一并清理**：现有外挂（`~/.claude/plugins/claude-hud/feeder/.env`，含从 `settings.json` 同步的真实 key）在 fork 验证通过后随 feeder 目录整体删除，不残留含 key 的文件。
+- **实施时 commit 前 secret-scan**：每次提交前跑 `rg -E "sk-[A-Za-z0-9]{16,}|gh[opsr]_[A-Za-z0-9]{20,}|AIza[A-Za-z0-9]{20,}"` 复核；必要时用 `git-secrets` / GitHub secret scanning 双保险，确保 git 历史零泄漏。
+- **已验证现状**（2026-07-15 扫描）：fork 仓库跟踪文件无 key / 敏感文件名，spec 无真实账户数据残留。
+
 ## 验证
 
 1. `npm ci && npm run build && npm test` 全绿（含新测试）
