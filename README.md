@@ -62,7 +62,7 @@ After that, reload plugins:
 
 **Step 3: Configure the statusline**
 ```
-/claude-hud:setup
+/claude-hud-glm:setup
 ```
 
 <details>
@@ -72,7 +72,7 @@ On Windows, Node.js LTS is the supported runtime for Claude HUD setup. If setup 
 ```powershell
 winget install OpenJS.NodeJS.LTS
 ```
-Then restart your shell and run `/claude-hud:setup` again.
+Then restart your shell and run `/claude-hud-glm:setup` again.
 
 </details>
 
@@ -104,7 +104,7 @@ Context █████░░░░░ 45% │ Usage ██░░░░░░░
 - **Line 1** — Model, provider label when positively identified (for example `Bedrock`, `Vertex`), project path, git branch
 - **Line 2** — Context bar (green → yellow → red) and usage rate limits
 
-### Optional lines (enable via `/claude-hud:configure`)
+### Optional lines (enable via `/claude-hud-glm:configure`)
 ```
 ◐ Edit: auth.ts | ✓ Read ×3 | ✓ Grep ×2        ← Tools activity
 ◐ explore [haiku]: Finding auth code (2m 15s)    ← Agent status
@@ -135,7 +135,7 @@ Claude Code → stdin JSON → claude-hud → stdout → displayed in your termi
 Customize your HUD anytime:
 
 ```
-/claude-hud:configure
+/claude-hud-glm:configure
 ```
 
 The guided flow handles layout, language, and common display toggles. Advanced overrides such as
@@ -158,11 +158,11 @@ After choosing a preset, you can turn individual elements on or off.
 ### Manual Configuration
 
 Edit `~/.claude/plugins/claude-hud/config.json` directly for advanced settings such as `colors.*`,
-`pathLevels`, `maxWidth`, threshold overrides, `display.timeFormat`, and `display.promptCacheTtlSeconds`. Running `/claude-hud:configure`
+`pathLevels`, `maxWidth`, threshold overrides, `display.timeFormat`, and `display.promptCacheTtlSeconds`. Running `/claude-hud-glm:configure`
 preserves those manual settings while still letting you change `language`, layout, and the common
 guided toggles.
 
-Simplified and Traditional Chinese HUD labels are available as explicit opt-ins. English stays the default unless you choose a Chinese locale in `/claude-hud:configure` or set `language` in config. The `zh` alias maps to Simplified Chinese, and `zh-TW` maps to Traditional Chinese. Guided config writes the canonical `zh-Hans` or `zh-Hant` value.
+Simplified and Traditional Chinese HUD labels are available as explicit opt-ins. English stays the default unless you choose a Chinese locale in `/claude-hud-glm:configure` or set `language` in config. The `zh` alias maps to Simplified Chinese, and `zh-TW` maps to Traditional Chinese. Guided config writes the canonical `zh-Hans` or `zh-Hant` value.
 
 ### Options
 
@@ -278,7 +278,7 @@ To disable, set `display.showUsage` to `false`.
 Reset times use relative countdowns by default. Set `display.timeFormat` to `absolute` for wall-clock
 times, `both` to show both forms, `elapsed` to show how far through each usage window you are, or
 `elapsedAndAbsolute` to show elapsed window progress plus the wall-clock reset time. This setting is
-manual-only today; `/claude-hud:configure` preserves it without editing it.
+manual-only today; `/claude-hud-glm:configure` preserves it without editing it.
 
 Set `display.showResetLabel` to `false` if you want shorter usage countdowns such as `(3h 17m)` instead of `(resets in 3h 17m)`.
 
@@ -394,7 +394,7 @@ Leaving it unset (or setting an explicit negative: `0`, `false`, `off`, `no`) ke
 **Config not applying?**
 - Check for JSON syntax errors: invalid JSON silently falls back to defaults
 - Ensure valid values: `pathLevels` must be 1, 2, or 3; `lineLayout` must be `expanded` or `compact`; `maxWidth` must be a positive number
-- Delete config and run `/claude-hud:configure` to regenerate
+- Delete config and run `/claude-hud-glm:configure` to regenerate
 
 **Git status missing?**
 - Verify you're in a git repository

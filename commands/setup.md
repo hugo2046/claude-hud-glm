@@ -13,7 +13,7 @@ Check for inconsistent plugin state that can occur after failed installations:
 ```bash
 # Check 1: Cache exists?
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-CACHE_EXISTS=$(ls -d "$CLAUDE_DIR/plugins/cache"/*/claude-hud 2>/dev/null && echo "YES" || echo "NO")
+CACHE_EXISTS=$(ls -d "$CLAUDE_DIR/plugins/cache"/*/claude-hud-glm 2>/dev/null && echo "YES" || echo "NO")
 
 # Check 2: Registry entry exists?
 REGISTRY_EXISTS=$(grep -q "claude-hud" "$CLAUDE_DIR/plugins/installed_plugins.json" 2>/dev/null && echo "YES" || echo "NO")
@@ -53,7 +53,7 @@ If ghost installation detected, ask user if they want to reset. If yes:
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 
 # Remove orphaned cache (handles both direct and marketplace installs)
-rm -rf "$CLAUDE_DIR/plugins/cache"/*/claude-hud
+rm -rf "$CLAUDE_DIR/plugins/cache"/*/claude-hud-glm
 
 # Remove temp files from failed installs
 rm -rf "$CLAUDE_DIR/plugins/cache/temp_local_"*
@@ -118,7 +118,7 @@ echo $OSTYPE
 
 1. Get plugin path (sorted by dotted numeric version, not modification time):
    ```bash
-   ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud/*/ 2>/dev/null | awk -F/ '{ print $(NF-1) "\t" $(0) }' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+[[:space:]]' | sort -t. -k1,1n -k2,2n -k3,3n -k4,4n | tail -1 | cut -f2-
+   ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud-glm/*/ 2>/dev/null | awk -F/ '{ print $(NF-1) "\t" $(0) }' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+[[:space:]]' | sort -t. -k1,1n -k2,2n -k3,3n -k4,4n | tail -1 | cut -f2-
    ```
    If empty, the plugin is not installed. Go back to Step 0 to check for ghost installation or EXDEV issues. If Step 0 was clean, ask the user to install via `/plugin install claude-hud` first.
 
@@ -142,7 +142,7 @@ echo $OSTYPE
    - On macOS/Linux, ask the user to install one of these:
      - Node.js LTS from https://nodejs.org/
      - Bun from https://bun.sh/
-   - After installation, ask the user to restart their shell and re-run `/claude-hud:setup`.
+   - After installation, ask the user to restart their shell and re-run `/claude-hud-glm:setup`.
 
 3. Verify the runtime exists:
    ```bash
@@ -176,12 +176,12 @@ echo $OSTYPE
 
    **When runtime is bun** - add `--env-file /dev/null` to prevent Bun from auto-loading project `.env` files:
    ```
-   bash -c 'cols=${COLUMNS:-}; case "$cols" in ""|*[!0-9]*) cols=$(stty size </dev/tty 2>/dev/null | awk '"'"'{print $2}'"'"');; esac; case "$cols" in ""|*[!0-9]*) cols=120;; esac; export COLUMNS=$(( cols > 4 ? cols - 4 : 1 )); plugin_dir=$(ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud/*/ 2>/dev/null | awk -F/ '"'"'{ print $(NF-1) "\t" $(0) }'"'"' | grep -E '"'"'^[0-9]+\.[0-9]+\.[0-9]+[[:space:]]'"'"' | sort -t. -k1,1n -k2,2n -k3,3n -k4,4n | tail -1 | cut -f2-); exec "{RUNTIME_PATH}" --env-file /dev/null "${plugin_dir}{SOURCE}"'
+   bash -c 'cols=${COLUMNS:-}; case "$cols" in ""|*[!0-9]*) cols=$(stty size </dev/tty 2>/dev/null | awk '"'"'{print $2}'"'"');; esac; case "$cols" in ""|*[!0-9]*) cols=120;; esac; export COLUMNS=$(( cols > 4 ? cols - 4 : 1 )); plugin_dir=$(ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud-glm/*/ 2>/dev/null | awk -F/ '"'"'{ print $(NF-1) "\t" $(0) }'"'"' | grep -E '"'"'^[0-9]+\.[0-9]+\.[0-9]+[[:space:]]'"'"' | sort -t. -k1,1n -k2,2n -k3,3n -k4,4n | tail -1 | cut -f2-); exec "{RUNTIME_PATH}" --env-file /dev/null "${plugin_dir}{SOURCE}"'
    ```
 
    **When runtime is node**:
    ```
-   bash -c 'cols=${COLUMNS:-}; case "$cols" in ""|*[!0-9]*) cols=$(stty size </dev/tty 2>/dev/null | awk '"'"'{print $2}'"'"');; esac; case "$cols" in ""|*[!0-9]*) cols=120;; esac; export COLUMNS=$(( cols > 4 ? cols - 4 : 1 )); plugin_dir=$(ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud/*/ 2>/dev/null | awk -F/ '"'"'{ print $(NF-1) "\t" $(0) }'"'"' | grep -E '"'"'^[0-9]+\.[0-9]+\.[0-9]+[[:space:]]'"'"' | sort -t. -k1,1n -k2,2n -k3,3n -k4,4n | tail -1 | cut -f2-); exec "{RUNTIME_PATH}" "${plugin_dir}{SOURCE}"'
+   bash -c 'cols=${COLUMNS:-}; case "$cols" in ""|*[!0-9]*) cols=$(stty size </dev/tty 2>/dev/null | awk '"'"'{print $2}'"'"');; esac; case "$cols" in ""|*[!0-9]*) cols=120;; esac; export COLUMNS=$(( cols > 4 ? cols - 4 : 1 )); plugin_dir=$(ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud-glm/*/ 2>/dev/null | awk -F/ '"'"'{ print $(NF-1) "\t" $(0) }'"'"' | grep -E '"'"'^[0-9]+\.[0-9]+\.[0-9]+[[:space:]]'"'"' | sort -t. -k1,1n -k2,2n -k3,3n -k4,4n | tail -1 | cut -f2-); exec "{RUNTIME_PATH}" "${plugin_dir}{SOURCE}"'
    ```
 
 **Windows + Git Bash** (Platform: `win32`, Shell: `bash`):
@@ -195,7 +195,7 @@ On Windows require `node` and always use `dist/index.js`.
 Instead, use `sort -V` (GNU version sort, included with Git for Windows) which avoids nested single quotes entirely. Also avoid wrapping the generated command in a second `bash -c ...` layer. Claude Code is already invoking the statusline through bash, so the direct shell command lets `exec` replace that shell instead of spawning an extra bash wrapper first. The command still exports `COLUMNS` so the HUD receives the real terminal width, and it uses the marketplace-aware cache glob:
 
    ```
-   cols=${COLUMNS:-}; case "$cols" in ""|*[!0-9]*) cols=$(stty size </dev/tty 2>/dev/null | awk '{print $2}');; esac; case "$cols" in ""|*[!0-9]*) cols=120;; esac; export COLUMNS=$(( cols > 4 ? cols - 4 : 1 )); plugin_dir=$(ls -1d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud/*/ 2>/dev/null | sort -V | tail -1); exec "{RUNTIME_PATH}" "${plugin_dir}{SOURCE}"
+   cols=${COLUMNS:-}; case "$cols" in ""|*[!0-9]*) cols=$(stty size </dev/tty 2>/dev/null | awk '{print $2}');; esac; case "$cols" in ""|*[!0-9]*) cols=120;; esac; export COLUMNS=$(( cols > 4 ? cols - 4 : 1 )); plugin_dir=$(ls -1d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud-glm/*/ 2>/dev/null | sort -V | tail -1); exec "{RUNTIME_PATH}" "${plugin_dir}{SOURCE}"
    ```
 
 **Windows + PowerShell** (Platform: `win32`, Shell: `powershell`, `pwsh`, or `cmd`, OSTYPE: other/empty):
@@ -221,7 +221,7 @@ Instead, use `sort -V` (GNU version sort, included with Git for Windows) which a
      ```powershell
      winget install OpenJS.NodeJS.LTS
      ```
-   - Otherwise ask the user to install Node.js LTS, then restart PowerShell and re-run `/claude-hud:setup`.
+   - Otherwise ask the user to install Node.js LTS, then restart PowerShell and re-run `/claude-hud-glm:setup`.
    - On Windows, do not offer Bun for statusLine setup. Use Node.js only.
 
 3. Use `dist\index.js`.
@@ -629,13 +629,13 @@ Verify the first bytes are `7B 0D 0A` (`{` + CRLF) or `7B 0A` (`{` + LF), not `E
 After successfully writing the config, tell the user:
 
 > ✅ Config written. **Please restart Claude Code now** — quit and run `claude` again in your terminal.
-> Once restarted, run `/claude-hud:setup` again to complete Step 4 and verify the HUD is working.
+> Once restarted, run `/claude-hud-glm:setup` again to complete Step 4 and verify the HUD is working.
 
 **Windows note**: Keep the restart guidance separate from runtime installation guidance.
 - If the user just installed Node.js, they should restart their shell first so `node` is available in `PATH`.
 - After `statusLine` is written successfully, they should fully quit Claude Code and launch a fresh session before judging whether the HUD setup worked.
 
-**Note**: The generated command dynamically finds and runs the latest installed plugin version. Updates are automatic - no need to re-run setup after plugin updates. If the HUD suddenly stops working, re-run `/claude-hud:setup` to verify the plugin is still installed.
+**Note**: The generated command dynamically finds and runs the latest installed plugin version. Updates are automatic - no need to re-run setup after plugin updates. If the HUD suddenly stops working, re-run `/claude-hud-glm:setup` to verify the plugin is still installed.
 
 **Restoring a previous statusline**: If the user previously had a different statusline and wants to restore it, use the backup path printed in Step 2.5.3. The previous command is stored in `~/.claude/plugins/claude-hud/previous-statusline.txt`. To restore:
 1. Find the most recent backup: `ls -t ~/.claude/settings.json.bak.* | head -1`
@@ -687,7 +687,7 @@ Use AskUserQuestion:
 
 1. **Restart Claude Code** (most common cause on macOS):
     - The statusLine config requires a restart to take effect
-    - Quit Claude Code completely and run `claude` again, then re-run `/claude-hud:setup` to verify
+    - Quit Claude Code completely and run `claude` again, then re-run `/claude-hud-glm:setup` to verify
     - If you've already restarted, continue below
 
 2. **Verify config was applied**:
@@ -709,7 +709,7 @@ Use AskUserQuestion:
    - Solution: re-detect the runtime path (`command -v node` on Windows, `command -v bun` or `command -v node` on macOS/Linux), and verify with `realpath {RUNTIME_PATH}` (or `readlink -f {RUNTIME_PATH}`) to get the true absolute path
 
    **"No such file or directory" for plugin**:
-   - Plugin might not be installed: `ls "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud/`
+   - Plugin might not be installed: `ls "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud-glm/`
    - Solution: reinstall plugin via marketplace
 
    **Windows shell mismatch (for example, "bash not recognized")**:
@@ -728,7 +728,7 @@ Use AskUserQuestion:
      ```powershell
      '{}' | & cmd.exe /c '{GENERATED_COMMAND}'
      ```
-     If you see either error, the existing setup predates the Node launcher format. Re-run `/claude-hud:setup` to regenerate `statusline.mjs` and a `cmd.exe`-launched command. See [#521](https://github.com/jarrodwatts/claude-hud/issues/521).
+     If you see either error, the existing setup predates the Node launcher format. Re-run `/claude-hud-glm:setup` to regenerate `statusline.mjs` and a `cmd.exe`-launched command. See [#521](https://github.com/jarrodwatts/claude-hud/issues/521).
 
    **Windows: PowerShell execution policy error**:
    - Run: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
@@ -738,6 +738,6 @@ Use AskUserQuestion:
 
    **WSL confusion**:
    - If using WSL, ensure plugin is installed in Linux environment, not Windows
-   - Check: `ls "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud/`
+   - Check: `ls "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud-glm/`
 
 5. **If still stuck**: Show the user the exact command that was generated and the error, so they can report it or debug further
