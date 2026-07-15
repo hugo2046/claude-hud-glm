@@ -9,13 +9,25 @@ A Claude Code plugin that shows what's happening — context usage, active tools
 
 > 🌐 English | [中文文档](README.zh.md)
 
+## GLM（智谱）配额监控
+
+> **这是 fork**（[hugo2046/claude-hud-glm](https://github.com/hugo2046/claude-hud-glm)），在上游 [jarrodwatts/claude-hud](https://github.com/jarrodwatts/claude-hud) 基础上加 **智谱 GLM 配额监控**。
+
+零额外配置——Claude Code 已配 GLM（`ANTHROPIC_BASE_URL` 指向 `open.bigmodel.cn` 或 `api.z.ai`，`ANTHROPIC_AUTH_TOKEN` 为智谱 api key）即可，HUD 自动显示 5h / 7d 配额 + 套餐等级：
+
+```
+Usage ░░ 12% (5h) | █ 3% (7d) | max
+```
+
+凭证从 Claude Code 环境继承，不落盘、不上传。仅支持智谱个人版；团队版（需 org/project）暂不支持。
+
 ## Install
 
 Inside a Claude Code instance, run the following commands:
 
 **Step 1: Add the marketplace**
 ```
-/plugin marketplace add jarrodwatts/claude-hud
+/plugin marketplace add hugo2046/claude-hud-glm
 ```
 
 **Step 2: Install the plugin**
@@ -38,7 +50,7 @@ Then run the install command below in that session. This is a [Claude Code platf
 </details>
 
 ```
-/plugin install claude-hud
+/plugin install claude-hud-glm
 ```
 
 After that, reload plugins:
@@ -410,7 +422,7 @@ Leaving it unset (or setting an explicit negative: `0`, `false`, `off`, `no`) ke
 ## Development
 
 ```bash
-git clone https://github.com/jarrodwatts/claude-hud
+git clone https://github.com/hugo2046/claude-hud-glm
 cd claude-hud
 npm ci && npm run build
 npm test

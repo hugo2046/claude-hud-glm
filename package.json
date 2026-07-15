@@ -1,7 +1,7 @@
 {
-  "name": "claude-hud",
-  "version": "0.4.2",
-  "description": "Real-time statusline HUD for Claude Code",
+  "name": "claude-hud-glm",
+  "version": "0.4.2-glm.1",
+  "description": "Real-time statusline HUD for Claude Code (GLM fork with Zhipu quota)",
   "type": "module",
   "main": "dist/index.js",
   "files": [
@@ -25,6 +25,11 @@
   ],
   "author": "Jarrod Watts",
   "license": "MIT",
+  "homepage": "https://github.com/hugo2046/claude-hud-glm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hugo2046/claude-hud-glm.git"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
