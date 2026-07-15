@@ -298,26 +298,34 @@ test("main includes usageData from stdin when available", async () => {
 });
 
 test("main leaves usageData null when stdin rate limits are absent and external fallback is unavailable", async () => {
-  let renderedContext;
-  let externalCalls = 0;
+  // 排除智谱来源：GLM 机器上 ANTHROPIC_BASE_URL=bigmodel.cn 会让智谱 hook 误触发，
+  // 此用例验证"无 stdin + 无 external → null"的原始行为，故临时切非智谱 env。
+  const origBase = process.env.ANTHROPIC_BASE_URL;
+  process.env.ANTHROPIC_BASE_URL = "https://api.anthropic.com";
+  try {
+    let renderedContext;
+    let externalCalls = 0;
 
-  await main({
-    readStdin: async () => makeStdin({ rate_limits: null }),
-    parseTranscript: async () => makeTranscript(),
-    countConfigs: async () => makeCounts(),
-    loadConfig: async () => makeConfig(),
-    getGitStatus: async () => null,
-    getUsageFromExternalSnapshot: () => {
-      externalCalls += 1;
-      return null;
-    },
-    render: (ctx) => {
-      renderedContext = ctx;
-    },
-  });
+    await main({
+      readStdin: async () => makeStdin({ rate_limits: null }),
+      parseTranscript: async () => makeTranscript(),
+      countConfigs: async () => makeCounts(),
+      loadConfig: async () => makeConfig(),
+      getGitStatus: async () => null,
+      getUsageFromExternalSnapshot: () => {
+        externalCalls += 1;
+        return null;
+      },
+      render: (ctx) => {
+        renderedContext = ctx;
+      },
+    });
 
-  assert.equal(externalCalls, 1);
-  assert.equal(renderedContext?.usageData, null);
+    assert.equal(externalCalls, 1);
+    assert.equal(renderedContext?.usageData, null);
+  } finally {
+    process.env.ANTHROPIC_BASE_URL = origBase;
+  }
 });
 
 test("main uses external usage fallback when stdin rate limits are absent", async () => {

@@ -11,6 +11,7 @@ import { readAuthInfo } from "./auth.js";
 import { resolveEffortLevel } from "./effort.js";
 import { applyContextWindowFallback } from "./context-cache.js";
 import { getUsageFromExternalSnapshot, writeExternalUsageSnapshot } from "./external-usage.js";
+import { getZhipuUsage, isZhipuProvider } from "./providers/zhipu.js";
 import { setLanguage, t } from "./i18n/index.js";
 export { getUsageFromExternalSnapshot, writeExternalUsageSnapshot } from "./external-usage.js";
 import { fileURLToPath } from "node:url";
@@ -50,6 +51,7 @@ export async function main(overrides = {}) {
         getMemoryUsage,
         readAuthInfo,
         applyContextWindowFallback,
+        getZhipuUsage,
         render,
         now: () => Date.now(),
         log: console.log,
@@ -110,6 +112,12 @@ export async function main(overrides = {}) {
                     };
                 }
             }
+        }
+        if (shouldReadUsage && !usageData && isZhipuProvider(process.env)) {
+            usageData = await deps.getZhipuUsage(process.env, {
+                now: deps.now(),
+                homeDir: process.env.HOME ?? "",
+            });
         }
         const extraCmd = deps.parseExtraCmdArg();
         const extraLabel = extraCmd ? await deps.runExtraCmd(extraCmd) : null;

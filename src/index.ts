@@ -11,6 +11,7 @@ import { readAuthInfo } from "./auth.js";
 import { resolveEffortLevel } from "./effort.js";
 import { applyContextWindowFallback } from "./context-cache.js";
 import { getUsageFromExternalSnapshot, writeExternalUsageSnapshot } from "./external-usage.js";
+import { getZhipuUsage, isZhipuProvider } from "./providers/zhipu.js";
 import { setLanguage, t } from "./i18n/index.js";
 import type { RenderContext } from "./types.js";
 
@@ -34,6 +35,7 @@ export type MainDeps = {
   readAuthInfo: typeof readAuthInfo;
   applyContextWindowFallback: typeof applyContextWindowFallback;
   render: typeof render;
+  getZhipuUsage: typeof getZhipuUsage;
   now: () => number;
   log: (...args: unknown[]) => void;
 };
@@ -75,6 +77,7 @@ export async function main(overrides: Partial<MainDeps> = {}): Promise<void> {
     getMemoryUsage,
     readAuthInfo,
     applyContextWindowFallback,
+    getZhipuUsage,
     render,
     now: () => Date.now(),
     log: console.log,
@@ -144,6 +147,13 @@ export async function main(overrides: Partial<MainDeps> = {}): Promise<void> {
           };
         }
       }
+    }
+
+    if (shouldReadUsage && !usageData && isZhipuProvider(process.env)) {
+      usageData = await deps.getZhipuUsage(process.env, {
+        now: deps.now(),
+        homeDir: process.env.HOME ?? "",
+      });
     }
 
     const extraCmd = deps.parseExtraCmdArg();
